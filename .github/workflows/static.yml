@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Number Time Zone Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Time Zone Checker</h1>
+
+        <div class="mb-6">
+            <label for="phoneNumberInput" class="block text-gray-700 text-sm font-medium mb-2">Enter Phone Number:</label>
+            <input
+                type="text"
+                id="phoneNumberInput"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                placeholder="e.g., (212) 555-1234 or +1-310-987-6543"
+                aria-label="Phone number input"
+            >
+            <p class="text-xs text-gray-500 mt-1">Supports various formats (digits, dashes, parentheses, spaces, +).</p>
+        </div>
+
+        <button
+            id="checkTimeButton"
+            class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 shadow-md"
+            aria-label="Check Time Zone"
+        >
+            Check Time Zone
+        </button>
+
+        <div id="resultDisplay" class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200 text-blue-800 hidden" role="status">
+            <p class="text-sm font-semibold mb-2">Current Time:</p>
+            <p id="currentTime" class="text-xl font-bold text-blue-700"></p>
+            <p id="timeZoneInfo" class="text-sm text-blue-600 mt-1"></p>
+        </div>
+
+        <div id="messageDisplay" class="mt-4 p-3 bg-red-100 rounded-lg border border-red-300 text-red-700 hidden" role="alert">
+            <p id="errorMessage" class="text-sm font-medium"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const phoneNumberInput = document.getElementById('phoneNumberInput');
+            const checkTimeButton = document.getElementById('checkTimeButton');
+            const resultDisplay = document.getElementById('resultDisplay');
+            const currentTimeElement = document.getElementById('currentTime');
+            const timeZoneInfoElement = document.getElementById('timeZoneInfo');
+            const messageDisplay = document.getElementById('messageDisplay');
+            const errorMessageElement = document.getElementById('errorMessage');
+
+            // Hardcoded mapping of US area codes to common time zones.
+            // This is a simplified example. A real-world application would need a comprehensive database or API.
+            const areaCodeToTimeZone = {
+                // East Coast (EST/EDT)
+                '201': 'America/New_York', // New Jersey
+                '202': 'America/New_York', // Washington D.C.
+                '203': 'America/New_York', // Connecticut
+                '212': 'America/New_York', // New York City
+                '215': 'America/New_York', // Philadelphia
+                '301': 'America/New_York', // Maryland
+                '302': 'America/New_York', // Delaware
+                '304': 'America/New_York', // West Virginia
+                '305': 'America/New_York', // Miami
+                '315': 'America/New_York', // Upstate New York
+                '321': 'America/New_York', // Florida
+                '332': 'America/New_York', // New York City
+                '334': 'America/New_York', // Alabama
+                '336': 'America/New_York', // North Carolina
+                '339': 'America/New_York', // Massachusetts
+                '401': 'America/New_York', // Rhode Island
+                '404': 'America/New_York', // Atlanta
+                '407': 'America/New_York', // Orlando
+                '410': 'America/New_York', // Maryland
+                '412': 'America/New_York', // Pittsburgh
+                '413': 'America/New_York', // Massachusetts
+                '443': 'America/New_York', // Maryland
+                '475': 'America/New_York', // Connecticut
+                '484': 'America/New_York', // Pennsylvania
+                '508': 'America/New_York', // Massachusetts
+                '516': 'America/New_York', // Long Island, NY
+                '518': 'America/New_York', // Upstate New York
+                '540': 'America/New_York', // Virginia
+                '561': 'America/New_York', // Florida
+                '570': 'America/New_York', // Pennsylvania
+                '585': 'America/New_York', // Rochester, NY
+                '603': 'America/New_York', // New Hampshire
+                '607': 'America/New_York', // Southern Tier, NY
+                '609': 'America/New_York', // New Jersey
+                '610': 'America/New_York', // Pennsylvania
+                '617': 'America/New_York', // Boston
+                '631': 'America/New_York', // Long Island, NY
+                '646': 'America/New_York', // New York City
+                '660': 'America/New_York', // Missouri
+                '678': 'America/New_York', // Atlanta
+                '689': 'America/New_York', // Orlando
+                '703': 'America/New_York', // Northern Virginia
+                '704': 'America/New_York', // Charlotte
+                '706': 'America/New_York', // Georgia
+                '716': 'America/New_York', // Buffalo, NY
+                '717': 'America/New_York', // Pennsylvania
+                '718': 'America/New_York', // New York City (outer boroughs)
+                '724': 'America/New_York', // Pennsylvania
+                '732': 'America/New_York', // New Jersey
+                '743': 'America/New_York', // North Carolina
+                '754': 'America/New_York', // Florida
+                '757': 'America/New_York', // Virginia
+                '762': 'America/New_York', // Georgia
+                '770': 'America/New_York', // Atlanta
+                '772': 'America/New_York', // Florida
+                '774': 'America/New_York', // Massachusetts
+                '781': 'America/New_York', // Massachusetts
+                '786': 'America/New_York', // Miami
+                '802': 'America/New_York', // Vermont
+                '804': 'America/New_York', // Richmond, VA
+                '813': 'America/New_York', // Tampa, FL
+                '828': 'America/New_York', // North Carolina
+                '843': 'America/New_York', // South Carolina
+                '845': 'America/New_York', // Mid-Hudson Valley, NY
+                '848': 'America/New_York', // New Jersey
+                '856': 'America/New_York', // South Jersey
+                '857': 'America/New_York', // Boston
+                '860': 'America/New_York', // Connecticut
+                '862': 'America/New_York', // New Jersey
+                '863': 'America/New_York', // Florida
+                '864': 'America/New_York', // South Carolina
+                '878': 'America/New_York', // Pennsylvania
+                '904': 'America/New_York', // Jacksonville, FL
+                '908': 'America/New_York', // New Jersey
+                '912': 'America/New_York', // Georgia
+                '914': 'America/New_York', // Westchester, NY
+                '917': 'America/New_York', // New York City (mobile)
+                '919': 'America/New_York', // Raleigh, NC
+                '929': 'America/New_York', // New York City
+                '934': 'America/New_York', // Long Island, NY
+                '941': 'America/New_York', // Florida
+                '954': 'America/New_York', // Florida
+                '973': 'America/New_York', // New Jersey
+                '978': 'America/New_York', // Massachusetts
+                '984': 'America/New_York', // Raleigh, NC
+
+                // Central Time (CST/CDT)
+                '210': 'America/Chicago', // San Antonio
+                '214': 'America/Chicago', // Dallas
+                '217': 'America/Chicago', // Central Illinois
+                '218': 'America/Chicago', // Northern Minnesota
+                '219': 'America/Chicago', // Northwest Indiana
+                '224': 'America/Chicago', // Chicago suburbs
+                '225': 'America/Chicago', // Baton Rouge
+                '228': 'America/Chicago', // Mississippi
+                '248': 'America/Detroit', // Detroit
+                '251': 'America/Chicago', // Alabama
+                '252': 'America/Chicago', // Eastern North Carolina
+                '254': 'America/Chicago', // Central Texas
+                '256': 'America/Chicago', // North Alabama
+                '260': 'America/Indianapolis', // Fort Wayne, Indiana (overlaps with EST)
+                '262': 'America/Chicago', // Southeast Wisconsin
+                '269': 'America/Detroit', // Southwest Michigan
+                '270': 'America/Chicago', // Western Kentucky
+                '276': 'America/New_York', // Southwest Virginia (overlaps with EST)
+                '281': 'America/Chicago', // Houston
+                '307': 'America/Denver', // Wyoming (Mountain Time)
+                '308': 'America/Denver', // Nebraska (Mountain Time)
+                '309': 'America/Chicago', // Central Illinois
+                '312': 'America/Chicago', // Chicago
+                '313': 'America/Detroit', // Detroit
+                '314': 'America/Chicago', // St. Louis
+                '316': 'America/Chicago', // Wichita, Kansas
+                '318': 'America/Chicago', // Northwest Louisiana
+                '319': 'America/Chicago', // Eastern Iowa
+                '320': 'America/Chicago', // Central Minnesota
+                '325': 'America/Chicago', // West Central Texas
+                '331': 'America/Chicago', // Chicago suburbs
+                '346': 'America/Chicago', // Houston
+                '352': 'America/New_York', // Central Florida (overlaps with EST)
+                '361': 'America/Chicago', // South Texas
+                '380': 'America/New_York', // Columbus, Ohio (overlaps with EST)
+                '386': 'America/New_York', // Northeast Florida (overlaps with EST)
+                '402': 'America/Chicago', // Eastern Nebraska
+                '405': 'America/Chicago', // Oklahoma City
+                '409': 'America/Chicago', // Southeast Texas
+                '417': 'America/Chicago', // Southwest Missouri
+                '419': 'America/New_York', // Northwest Ohio (overlaps with EST)
+                '430': 'America/Chicago', // Northeast Texas
+                '432': 'America/Denver', // West Texas (Mountain Time)
+                '440': 'America/New_York', // Cleveland (overlaps with EST)
+                '463': 'America/Indianapolis', // Indianapolis (overlaps with EST)
+                '469': 'America/Chicago', // Dallas
+                '479': 'America/Chicago', // Northwest Arkansas
+                '501': 'America/Chicago', // Central Arkansas
+                '502': 'America/New_York', // Louisville, KY (overlaps with EST)
+                '504': 'America/Chicago', // New Orleans
+                '507': 'America/Chicago', // Southern Minnesota
+                '512': 'America/Chicago', // Austin
+                '513': 'America/New_York', // Cincinnati (overlaps with EST)
+                '515': 'America/Chicago', // Central Iowa
+                '517': 'America/Detroit', // Lansing, Michigan
+                '531': 'America/Chicago', // Eastern Nebraska
+                '563': 'America/Chicago', // Eastern Iowa
+                '573': 'America/Chicago', // Central Missouri
+                '574': 'America/Indianapolis', // North Central Indiana (overlaps with EST)
+                '580': 'America/Chicago', // Western Oklahoma
+                '586': 'America/Detroit', // Macomb County, Michigan
+                '601': 'America/Chicago', // Central Mississippi
+                '605': 'America/Chicago', // South Dakota
+                '606': 'America/New_York', // Eastern Kentucky (overlaps with EST)
+                '612': 'America/Chicago', // Minneapolis
+                '614': 'America/New_York', // Columbus, Ohio (overlaps with EST)
+                '615': 'America/Chicago', // Nashville
+                '616': 'America/Detroit', // Grand Rapids, Michigan
+                '620': 'America/Chicago', // Southern Kansas
+                '623': 'America/Phoenix', // Arizona (Mountain Standard Time, no DST)
+                '626': 'America/Los_Angeles', // Los Angeles (Pacific Time)
+                '629': 'America/Chicago', // Nashville
+                '630': 'America/Chicago', // Chicago suburbs
+                '636': 'America/Chicago', // St. Louis suburbs
+                '651': 'America/Chicago', // St. Paul
+                '662': 'America/Chicago', // North Mississippi
+                '664': 'America/New_York', // North Carolina (overlaps with EST)
+                '682': 'America/Chicago', // Fort Worth
+                '701': 'America/Chicago', // North Dakota
+                '708': 'America/Chicago', // Chicago suburbs
+                '712': 'America/Chicago', // Western Iowa
+                '713': 'America/Chicago', // Houston
+                '715': 'America/Chicago', // Northern Wisconsin
+                '720': 'America/Denver', // Denver (Mountain Time)
+                '734': 'America/Detroit', // Ann Arbor, Michigan
+                '740': 'America/New_York', // Ohio (overlaps with EST)
+                '763': 'America/Chicago', // Minneapolis suburbs
+                '765': 'America/Indianapolis', // Central Indiana (overlaps with EST)
+                '769': 'America/Chicago', // Central Mississippi
+                '773': 'America/Chicago', // Chicago
+                '779': 'America/Chicago', // Northern Illinois
+                '785': 'America/Chicago', // Topeka, Kansas
+                '810': 'America/Detroit', // Flint, Michigan
+                '812': 'America/Indianapolis', // Southern Indiana (overlaps with EST)
+                '815': 'America/Chicago', // Northern Illinois
+                '816': 'America/Chicago', // Kansas City, MO
+                '817': 'America/Chicago', // Fort Worth
+                '820': 'America/Chicago', // Alabama
+                '821': 'America/Chicago', // Tennessee
+                '830': 'America/Chicago', // Southwest Texas
+                '832': 'America/Chicago', // Houston
+                '847': 'America/Chicago', // Chicago suburbs
+                '850': 'America/New_York', // Florida Panhandle (overlaps with EST, CST)
+                '859': 'America/New_York', // Lexington, KY (overlaps with EST)
+                '865': 'America/New_York', // Knoxville, TN (overlaps with EST)
+                '870': 'America/Chicago', // Eastern Arkansas
+                '901': 'America/Chicago', // Memphis
+                '903': 'America/Chicago', // East Texas
+                '913': 'America/Chicago', // Kansas City, KS
+                '918': 'America/Chicago', // Tulsa, OK
+                '920': 'America/Chicago', // Northeast Wisconsin
+                '931': 'America/Chicago', // Middle Tennessee
+                '936': 'America/Chicago', // Southeast Texas
+                '937': 'America/New_York', // Dayton, Ohio (overlaps with EST)
+                '940': 'America/Chicago', // North Texas
+                '952': 'America/Chicago', // Minneapolis suburbs
+                '956': 'America/Chicago', // South Texas
+                '970': 'America/Denver', // Northern Colorado (Mountain Time)
+                '972': 'America/Chicago', // Dallas
+                '979': 'America/Chicago', // Southeast Texas
+
+                // Mountain Time (MST/MDT)
+                '208': 'America/Boise', // Idaho (overlaps with PST)
+                '253': 'America/Los_Angeles', // Washington (Pacific Time)
+                '303': 'America/Denver', // Denver
+                '406': 'America/Denver', // Montana
+                '435': 'America/Denver', // Utah (overlaps with PST)
+                '480': 'America/Phoenix', // Arizona (MST, no DST)
+                '505': 'America/Denver', // New Mexico
+                '520': 'America/Phoenix', // Arizona (MST, no DST)
+                '575': 'America/Denver', // New Mexico
+                '602': 'America/Phoenix', // Arizona (MST, no DST)
+                '623': 'America/Phoenix', // Arizona (MST, no DST)
+                '719': 'America/Denver', // Colorado Springs
+                '775': 'America/Los_Angeles', // Nevada (Pacific Time)
+                '801': 'America/Denver', // Utah
+                '820': 'America/Phoenix', // Arizona (MST, no DST)
+                '831': 'America/Los_Angeles', // California (Pacific Time)
+                '928': 'America/Phoenix', // Arizona (MST, no DST)
+
+                // Pacific Time (PST/PDT)
+                '206': 'America/Los_Angeles', // Seattle
+                '209': 'America/Los_Angeles', // Central California
+                '253': 'America/Los_Angeles', // Tacoma, WA
+                '310': 'America/Los_Angeles', // Los Angeles
+                '323': 'America/Los_Angeles', // Los Angeles
+                '360': 'America/Los_Angeles', // Western Washington
+                '408': 'America/Los_Angeles', // San Jose
+                '415': 'America/Los_Angeles', // San Francisco
+                '424': 'America/Los_Angeles', // Los Angeles
+                '425': 'America/Los_Angeles', // Seattle suburbs
+                '442': 'America/Los_Angeles', // Southern California
+                '458': 'America/Los_Angeles', // Oregon
+                '503': 'America/Los_Angeles', // Portland, OR
+                '509': 'America/Los_Angeles', // Eastern Washington
+                '530': 'America/Los_Angeles', // Northern California
+                '541': 'America/Los_Angeles', // Oregon
+                '559': 'America/Los_Angeles', // Central California
+                '562': 'America/Los_Angeles', // Long Beach, CA
+                '619': 'America/Los_Angeles', // San Diego
+                '628': 'America/Los_Angeles', // San Francisco
+                '650': 'America/Los_Angeles', // San Mateo, CA
+                '657': 'America/Los_Angeles', // Orange County, CA
+                '661': 'America/Los_Angeles', // Bakersfield, CA
+                '669': 'America/Los_Angeles', // San Jose
+                '707': 'America/Los_Angeles', // Northern California
+                '714': 'America/Los_Angeles', // Orange County, CA
+                '747': 'America/Los_Angeles', // San Fernando Valley, CA
+                '760': 'America/Los_Angeles', // Southern California
+                '775': 'America/Los_Angeles', // Nevada
+                '805': 'America/Los_Angeles', // Central Coast, CA
+                '818': 'America/Los_Angeles', // San Fernando Valley, CA
+                '858': 'America/Los_Angeles', // San Diego
+                '909': 'America/Los_Angeles', // San Bernardino County, CA
+                '916': 'America/Los_Angeles', // Sacramento
+                '925': 'America/Los_Angeles', // East Bay, CA
+                '949': 'America/Los_Angeles', // Orange County, CA
+                '951': 'America/Los_Angeles', // Riverside County, CA
+                '971': 'America/Los_Angeles', // Portland, OR
+                '986': 'America/Boise', // Idaho (overlaps with Mountain Time)
+
+                // Alaska Time (AKST/AKDT)
+                '907': 'America/Anchorage', // Alaska
+
+                // Hawaii Time (HST) - no DST
+                '808': 'Pacific/Honolulu' // Hawaii
+            };
+
+            /**
+             * Displays an error message.
+             * @param {string} message - The error message to display.
+             */
+            function showErrorMessage(message) {
+                resultDisplay.classList.add('hidden');
+                messageDisplay.classList.remove('hidden');
+                errorMessageElement.textContent = message;
+            }
+
+            /**
+             * Hides any displayed messages (error or result).
+             */
+            function hideMessages() {
+                resultDisplay.classList.add('hidden');
+                messageDisplay.classList.add('hidden');
+            }
+
+            checkTimeButton.addEventListener('click', () => {
+                hideMessages(); // Clear previous messages
+
+                const rawPhoneNumber = phoneNumberInput.value;
+                // Clean the phone number: remove all non-digit characters.
+                const cleanedPhoneNumber = rawPhoneNumber.replace(/\D/g, '');
+
+                if (cleanedPhoneNumber.length < 3) {
+                    showErrorMessage('Please enter a valid phone number with at least 3 digits.');
+                    return;
+                }
+
+                // Extract the first three digits as the area code.
+                const areaCode = cleanedPhoneNumber.substring(0, 3);
+
+                // Look up the time zone using the hardcoded map.
+                const timeZone = areaCodeToTimeZone[areaCode];
+
+                if (timeZone) {
+                    try {
+                        // Get the current date and time in the specified time zone.
+                        const now = new Date();
+                        const options = {
+                            hour: 'numeric',
+                            minute: 'numeric',
+                            second: 'numeric',
+                            hour12: true, // Use 12-hour format with AM/PM
+                            timeZone: timeZone,
+                            timeZoneName: 'long' // e.g., "Pacific Daylight Time"
+                        };
+                        const formatter = new Intl.DateTimeFormat('en-US', options);
+                        const formattedTime = formatter.format(now);
+
+                        // Get more detailed time zone information for display
+                        const timeZoneOffsetOptions = {
+                            timeZone: timeZone,
+                            hour: 'numeric',
+                            minute: 'numeric',
+                            timeZoneName: 'shortOffset' // e.g., "GMT-7"
+                        };
+                        const offsetFormatter = new Intl.DateTimeFormat('en-US', timeZoneOffsetOptions);
+                        const offsetString = offsetFormatter.format(now);
+                        const timeZoneShortNameOptions = {
+                            timeZone: timeZone,
+                            timeZoneName: 'short' // e.g., "PST" or "PDT"
+                        };
+                        const shortNameFormatter = new Intl.DateTimeFormat('en-US', timeZoneShortNameOptions);
+                        const shortName = shortNameFormatter.format(now).split(' ')[1]; // Extract the short name like PST/PDT
+
+                        currentTimeElement.textContent = formattedTime;
+                        timeZoneInfoElement.textContent = `Time Zone: ${timeZone} (${shortName}, ${offsetString.split(' ')[0]})`;
+                        resultDisplay.classList.remove('hidden'); // Show the result display
+                    } catch (error) {
+                        console.error("Error getting time zone info:", error);
+                        showErrorMessage('Could not determine time for this area code. Please check the number or try again.');
+                    }
+                } else {
+                    showErrorMessage(`Area code "${areaCode}" not found in our limited database. Please try a different US area code or refer to a comprehensive time zone resource.`);
+                }
+            });
+
+            // Optional: Allow pressing Enter to trigger the check
+            phoneNumberInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    checkTimeButton.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
